@@ -1,4 +1,4 @@
-from utility import get_stats, merge
+from .utility import get_stats, merge
 import regex as re
 
 GPT4_SPLIT_PATTERN = r"""'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+"""
@@ -25,7 +25,9 @@ class RegexTokenizer():
         for i in range(num_merges):
             stats = {}
             for chunk_id in ids:
-                get_stats(chunk_id, stats)
+                chunk_stats = get_stats(chunk_id)
+                for k, v in chunk_stats.items():
+                    stats[k] = stats.get(k, 0) + v
             pair = max(stats, key=stats.get)
             idx = 256 + i
             # print(f"merging {pair} to {idx}")
@@ -37,13 +39,16 @@ class RegexTokenizer():
 
     def _encode_chunk(self, text_bytes):
         ids = list(text_bytes)
-        while len(ids)>=2:
-            pair = min(ids, key= lambda p: self.merges.get(p, float('inf')))
+        while True:
+            if len(ids) < 2:
+                break
+            pairs = list(zip(ids, ids[1:]))
+            pair = min(pairs, key=lambda p: self.merges.get(p, float('inf')))
             if pair not in self.merges:
                 break
             idx = self.merges[pair]
-            ids = merge(ids,pair, idx)
-        return ids  
+            ids = merge(ids, pair, idx)
+        return ids
 
     def encode_simple(self, text):
         text_chunks = re.findall(self.pattern, text)

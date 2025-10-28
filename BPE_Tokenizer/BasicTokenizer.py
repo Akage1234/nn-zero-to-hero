@@ -1,4 +1,4 @@
-from utility import get_stats, merge
+from .utility import get_stats, merge
 
 class BasicTokenizer():
     def __init__(self):
@@ -25,13 +25,16 @@ class BasicTokenizer():
 
     def encode(self, text):
         ids = list(text.encode('utf-8'))
-        while len(ids)>=2:
-            pair = min(ids, key= lambda p: self.merges.get(p, float('inf')))
+        while True:
+            if len(ids) < 2:
+                break
+            pairs = list(zip(ids, ids[1:]))
+            pair = min(pairs, key=lambda p: self.merges.get(p, float('inf')))
             if pair not in self.merges:
                 break
             idx = self.merges[pair]
-            ids = merge(ids,pair, idx)
-        return ids    
+            ids = merge(ids, pair, idx)
+        return ids 
 
     def decode(self, ids):
         text_bytes = b"".join(self.vocab[idx] for idx in ids)
